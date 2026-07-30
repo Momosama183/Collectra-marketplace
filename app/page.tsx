@@ -519,6 +519,7 @@ export default function Home() {
           <a href="#tracking">Tracking</a>
           <a href="#contact">Contact</a>
           <a href="/verify">Verify Card</a>
+          <a href="/packaging">Packaging Check</a>
         </div>
 
         <a href="#order" className="navButton">
@@ -542,6 +543,9 @@ export default function Home() {
   <a href="/verify" className="secondary">
     Verify a Card
   </a>
+  <a href="/packaging" className="secondary">
+  Check Packaging
+</a>
   <a href="#contact" className="secondary">
     Contact Admins
   </a>
