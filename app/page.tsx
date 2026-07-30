@@ -495,6 +495,7 @@ export default function Home() {
   return (
     <main>
       <nav className="navbar">
+        <a href="/" style={{ textDecoration: "none" }}>
         <div className="logo" style={{ display: "flex", alignItems: "center", gap: 10 }}>
   <svg width="30" height="30" viewBox="0 0 40 40">
     <defs>
@@ -510,7 +511,7 @@ export default function Home() {
   </svg>
   COLLECTRA
 </div>
-
+</a>
         <div className="navLinks">
           <a href="#order">Order</a>
           <a href="#cart">Cart</a>

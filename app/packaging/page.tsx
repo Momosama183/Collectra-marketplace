@@ -100,6 +100,7 @@ export default function PackagingPage() {
   return (
     <div className="verifyPage">
       <nav className="verifyNav">
+        <a href="/" style={{ textDecoration: "none" }}>
         <span className="verifyLogo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <svg width="20" height="20" viewBox="0 0 40 40">
             <defs>
@@ -115,6 +116,7 @@ export default function PackagingPage() {
           </svg>
           COLLECTRA
         </span>
+        </a>
       </nav>
 
       <div className="verifyHero">
