@@ -518,6 +518,7 @@ export default function Home() {
           <a href="#payment">Payment</a>
           <a href="#tracking">Tracking</a>
           <a href="#contact">Contact</a>
+          <a href="/verify">Verify Card</a>
         </div>
 
         <a href="#order" className="navButton">
@@ -535,13 +536,16 @@ export default function Home() {
           </p>
 
           <div className="heroButtons">
-            <a href="#order" className="primary">
-              Start Ordering
-            </a>
-            <a href="#contact" className="secondary">
-              Contact Admins
-            </a>
-          </div>
+  <a href="#order" className="primary">
+    Start Ordering
+  </a>
+  <a href="/verify" className="secondary">
+    Verify a Card
+  </a>
+  <a href="#contact" className="secondary">
+    Contact Admins
+  </a>
+</div>
         </div>
       </section>
 
