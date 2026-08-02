@@ -2,11 +2,6 @@
 
 import { useState, useRef } from "react";
 
-/**
- * Collectra — หน้าตรวจสอบแพ็ค/แกะกล่อง (packing vs unboxing)
- * ธีมและโครงสร้างเดียวกับหน้า /verify แต่รับรูป 2 ฝั่ง (ผู้ขาย/ผู้ซื้อ)
- */
-
 type Observation = { type: "positive" | "concern"; text: string };
 
 type PackingResult = {
@@ -101,21 +96,9 @@ export default function PackagingPage() {
     <div className="verifyPage">
       <nav className="verifyNav">
         <a href="/" style={{ textDecoration: "none" }}>
-        <span className="verifyLogo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <svg width="20" height="20" viewBox="0 0 40 40">
-            <defs>
-              <linearGradient id="collectraGrad3" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3B6FD4" />
-                <stop offset="100%" stopColor="#E0B84B" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M20,2 C22,14 26,18 38,20 C26,22 22,26 20,38 C18,26 14,22 2,20 C14,18 18,14 20,2 Z"
-              fill="url(#collectraGrad3)"
-            />
-          </svg>
-          COLLECTRA
-        </span>
+          <span className="verifyLogo" style={{ display: "flex", alignItems: "center" }}>
+            <img src="/logo.png" alt="Collectra" style={{ height: 120, width: "auto" }} />
+          </span>
         </a>
       </nav>
 

@@ -3,14 +3,7 @@
 import { useState, useRef } from "react";
 
 /**
- * ALL IN Verify — หน้าตรวจสอบของแท้/ปลอมของ photo card
- *
- * ตามสเปค UI/UX ที่ทีมส่งมา:
- * - ธีมกรมท่าเข้ม + การ์ดขาว + ปุ่มใหญ่ ให้ความรู้สึกน่าเชื่อถือ
- * - อัปโหลดรูปหน้า (จำเป็น) + หลัง (ไม่บังคับ)
- * - คำแนะนำการถ่ายรูปก่อนอัปโหลด
- * - ปุ่ม Authenticate Card -> เรียก /app/api/check-card
- * - หน้าผลลัพธ์: badge สี, คะแนนวงกลม, สรุป, observations, disclaimer
+ * Collectra — หน้าตรวจสอบของแท้/ปลอมของ photo card
  */
 
 type Observation = { type: "positive" | "concern"; text: string };
@@ -104,22 +97,10 @@ export default function VerifyPage() {
     <div className="verifyPage">
       <nav className="verifyNav">
         <a href="/" style={{ textDecoration: "none" }}>
-        <span className="verifyLogo" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-  <svg width="20" height="20" viewBox="0 0 40 40">
-    <defs>
-      <linearGradient id="collectraGrad2" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="#3B6FD4" />
-        <stop offset="100%" stopColor="#E0B84B" />
-      </linearGradient>
-    </defs>
-    <path
-      d="M20,2 C22,14 26,18 38,20 C26,22 22,26 20,38 C18,26 14,22 2,20 C14,18 18,14 20,2 Z"
-      fill="url(#collectraGrad2)"
-    />
-  </svg>
-  COLLECTRA
-</span>
-</a>
+          <span className="verifyLogo" style={{ display: "flex", alignItems: "center" }}>
+            <img src="/logo.png" alt="Collectra" style={{ height: 120, width: "auto" }} />
+          </span>
+        </a>
       </nav>
 
       <div className="verifyHero">
@@ -128,7 +109,6 @@ export default function VerifyPage() {
       </div>
 
       <div className="verifyCard">
-        {/* Upload section */}
         <div className="verifyUploadGrid">
           <UploadBox
             label="รูปด้านหน้า"
@@ -167,7 +147,6 @@ export default function VerifyPage() {
           />
         </div>
 
-        {/* Photography guide */}
         <div className="verifyGuide">
           <p className="verifyGuideTitle">📷 คำแนะนำก่อนถ่ายรูป</p>
           <div className="verifyGuideGrid">
@@ -191,7 +170,6 @@ export default function VerifyPage() {
           </div>
         </div>
 
-        {/* Authenticate button */}
         <button
           className="verifyButton"
           disabled={!frontFile || loading}
@@ -200,7 +178,6 @@ export default function VerifyPage() {
           {loading ? "Analyzing…" : "Authenticate Card"}
         </button>
 
-        {/* Loading state */}
         {loading && (
           <div className="verifyLoading">
             <div className="verifySpinner" />
@@ -216,10 +193,8 @@ export default function VerifyPage() {
           </div>
         )}
 
-        {/* Error */}
         {error && <div className="verifyError">{error}</div>}
 
-        {/* Results */}
         {result && verdictStyle && (
           <div className="verifyResults">
             <span
@@ -316,7 +291,7 @@ function ScoreCircle({ score }: { score: number }) {
           transform="rotate(-90 55 55)"
           style={{ transition: "stroke-dashoffset 0.6s ease" }}
         />
-        <text x="55" y="55" textAnchor="middle" dominantBaseline="central" fontSize="24" fontWeight="900" fill="#061733">
+        <text x="55" y="55" textAnchor="middle" dominantBaseline="central" fontSize="24" fontWeight="900" fill="#26314A">
           {score}%
         </text>
       </svg>
