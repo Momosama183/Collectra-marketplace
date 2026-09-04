@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/checkCardPrompt";
 
 /**
- * PC Check — /app/api/check-card (ผู้ให้บริการ AI: Claude / Anthropic)
+ * PC Check — /app/api/check-card-openai (ผู้ให้บริการ AI: OpenAI GPT-4o)
  *
- * พอร์ตมาจาก checker.py (Python) เป็น TypeScript ให้รันอยู่ใน
- * Next.js project เดียวกันเลย ไม่ต้องมี Python backend แยก
+ * เวอร์ชันเดียวกับ /app/api/check-card แต่เปลี่ยนไปเรียก OpenAI
+ * Chat Completions API แทน Anthropic — ใช้ SYSTEM_PROMPT ตัวเดียวกัน
+ * ทุกตัวอักษรจาก lib/checkCardPrompt.ts เพื่อให้เทียบผลลัพธ์กับ
+ * Claude/Gemini ได้อย่างยุติธรรม
  *
  * รับ: multipart/form-data
  *   field "front" (จำเป็น) — File รูปหน้าการ์ด
@@ -14,20 +16,14 @@ import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/che
  * คืนค่า JSON:
  *   { confidence_score, verdict, verdict_th, summary, observations, disclaimer }
  *
- * ต้องตั้งค่า ANTHROPIC_API_KEY ใน .env.local ก่อนใช้งาน
+ * ต้องตั้งค่า OPENAI_API_KEY ใน .env.local ก่อนใช้งาน
  * (ห้ามใส่ NEXT_PUBLIC_ นำหน้า เพราะต้องอยู่ฝั่งเซิร์ฟเวอร์เท่านั้น)
- *
- * ดู /app/api/check-card-openai และ /app/api/check-card-gemini
- * สำหรับเวอร์ชันที่ใช้ AI เจ้าอื่น — ทั้งสามตัวใช้ SYSTEM_PROMPT
- * เดียวกันจาก lib/checkCardPrompt.ts เพื่อให้เทียบผลลัพธ์กันได้
- * อย่างยุติธรรม (apples-to-apples)
+ * ขอ API key ได้ที่ https://platform.openai.com/api-keys
  */
 
-const SYSTEM_PROMPT = CHECK_CARD_SYSTEM_PROMPT;
-
-type ClaudeContentBlock =
+type OpenAIContentBlock =
   | { type: "text"; text: string }
-  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+  | { type: "image_url"; image_url: { url: string } };
 
 export async function POST(req: Request) {
   try {
@@ -42,30 +38,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "ไม่พบ ANTHROPIC_API_KEY บนเซิร์ฟเวอร์ — ตั้งค่าใน .env.local ก่อน" },
+        { error: "ไม่พบ OPENAI_API_KEY บนเซิร์ฟเวอร์ — ตั้งค่าใน .env.local ก่อน" },
         { status: 500 }
       );
     }
 
     const frontImg = await fileToBase64(front);
 
-    const content: ClaudeContentBlock[] = [
+    const content: OpenAIContentBlock[] = [
       { type: "text", text: "นี่คือรูปด้านหน้าของการ์ดที่ต้องการตรวจสอบ:" },
-      {
-        type: "image",
-        source: { type: "base64", media_type: frontImg.mediaType, data: frontImg.data },
-      },
+      { type: "image_url", image_url: { url: `data:${frontImg.mediaType};base64,${frontImg.data}` } },
     ];
 
     if (back && back instanceof File && back.size > 0) {
       const backImg = await fileToBase64(back);
       content.push({ type: "text", text: "นี่คือรูปด้านหลังของการ์ดใบเดียวกัน:" });
       content.push({
-        type: "image",
-        source: { type: "base64", media_type: backImg.mediaType, data: backImg.data },
+        type: "image_url",
+        image_url: { url: `data:${backImg.mediaType};base64,${backImg.data}` },
       });
     }
 
@@ -74,36 +67,33 @@ export async function POST(req: Request) {
       text: "วิเคราะห์รูป photo card นี้ตามคำสั่งของระบบ ตอบเป็น JSON เท่านั้น",
     });
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: "gpt-4o",
         max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content }],
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: CHECK_CARD_SYSTEM_PROMPT },
+          { role: "user", content },
+        ],
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
       return NextResponse.json(
-        { error: `เรียก Claude API ไม่สำเร็จ (${response.status}): ${errText}` },
+        { error: `เรียก OpenAI API ไม่สำเร็จ (${response.status}): ${errText}` },
         { status: 502 }
       );
     }
 
     const data = await response.json();
-    const rawText = (data.content ?? [])
-      .filter((b: { type: string }) => b.type === "text")
-      .map((b: { text: string }) => b.text)
-      .join("")
-      .trim();
-
+    const rawText = (data.choices?.[0]?.message?.content ?? "").trim();
     const cleaned = cleanJsonText(rawText);
 
     let result: unknown;

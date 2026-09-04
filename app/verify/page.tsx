@@ -8,6 +8,20 @@ import { useState, useRef } from "react";
 
 type Observation = { type: "positive" | "concern"; text: string };
 
+type Provider = "claude" | "openai" | "gemini";
+
+const PROVIDER_ENDPOINT: Record<Provider, string> = {
+  claude: "/app/api/check-card",
+  openai: "/app/api/check-card-openai",
+  gemini: "/app/api/check-card-gemini",
+};
+
+const PROVIDER_LABEL: Record<Provider, string> = {
+  claude: "Claude (Anthropic)",
+  openai: "GPT-4o (OpenAI)",
+  gemini: "Gemini (Google)",
+};
+
 type VerifyResult = {
   confidence_score: number;
   verdict: "Likely Authentic" | "Suspicious" | "Needs Manual Review";
@@ -31,6 +45,7 @@ export default function VerifyPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [provider, setProvider] = useState<Provider>("claude");
 
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
@@ -63,7 +78,7 @@ export default function VerifyPage() {
       formData.append("front", frontFile);
       if (backFile) formData.append("back", backFile);
 
-      const response = await fetch("/app/api/check-card", {
+      const response = await fetch(PROVIDER_ENDPOINT[provider], {
         method: "POST",
         body: formData,
       });
@@ -170,12 +185,31 @@ export default function VerifyPage() {
           </div>
         </div>
 
+        <div className="verifyProviderRow">
+          <label htmlFor="ai-provider" className="verifyProviderLabel">
+            เลือก AI ที่จะใช้ตรวจสอบ
+          </label>
+          <select
+            id="ai-provider"
+            className="verifyProviderSelect"
+            value={provider}
+            disabled={loading}
+            onChange={(e) => setProvider(e.target.value as Provider)}
+          >
+            {(Object.keys(PROVIDER_LABEL) as Provider[]).map((p) => (
+              <option key={p} value={p}>
+                {PROVIDER_LABEL[p]}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           className="verifyButton"
           disabled={!frontFile || loading}
           onClick={handleAuthenticate}
         >
-          {loading ? "Analyzing…" : "Authenticate Card"}
+          {loading ? "Analyzing…" : `Authenticate Card (${PROVIDER_LABEL[provider]})`}
         </button>
 
         {loading && (
@@ -197,6 +231,7 @@ export default function VerifyPage() {
 
         {result && verdictStyle && (
           <div className="verifyResults">
+            <p className="verifyProviderUsed">ตรวจโดย: {PROVIDER_LABEL[provider]}</p>
             <span
               className="verifyBadge"
               style={{ color: verdictStyle.color, background: verdictStyle.bg }}

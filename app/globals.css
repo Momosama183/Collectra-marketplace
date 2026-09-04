@@ -937,6 +937,42 @@ footer p {
   line-height: 1.7;
 }
 
+.verifyProviderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #faf8f4;
+  border-radius: 16px;
+  padding: 14px 18px;
+}
+
+.verifyProviderLabel {
+  font-weight: 800;
+  color: #26314A;
+  font-size: 13px;
+  margin: 0;
+}
+
+.verifyProviderSelect {
+  border: 1px solid #dfe3ee;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #26314A;
+  background: white;
+  cursor: pointer;
+}
+
+.verifyProviderUsed {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5B6478;
+  margin: 0 0 4px;
+}
+
 .verifyButton {
   background: linear-gradient(135deg, #26314A 0%, #3B6FD4 55%, #E0B84B 100%);
   color: white;
