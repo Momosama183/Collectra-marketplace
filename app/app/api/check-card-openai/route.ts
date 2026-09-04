@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/checkCardPrompt";
 
 /**
- * PC Check — /app/api/check-card-openai (ผู้ให้บริการ AI: OpenAI GPT-4o)
+ * PC Check — /app/api/check-card-openai (ผู้ให้บริการ AI: OpenAI GPT-5.6 Sol)
+ * โมเดล "gpt-4o" ถูก OpenAI retire ไปแล้ว (ปิดใช้งานปี 2026) จึงเปลี่ยน
+ * มาใช้ "gpt-5.6-sol" ซึ่งเป็นรุ่นปัจจุบันที่รองรับ vision ผ่าน
+ * Chat Completions API แทน
  *
  * เวอร์ชันเดียวกับ /app/api/check-card แต่เปลี่ยนไปเรียก OpenAI
  * Chat Completions API แทน Anthropic — ใช้ SYSTEM_PROMPT ตัวเดียวกัน
@@ -74,7 +77,7 @@ export async function POST(req: Request) {
         authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-5.6-sol",
         max_tokens: 2000,
         response_format: { type: "json_object" },
         messages: [

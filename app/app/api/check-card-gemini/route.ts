@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/checkCardPrompt";
 
 /**
- * PC Check — /app/api/check-card-gemini (ผู้ให้บริการ AI: Google Gemini)
+ * PC Check — /app/api/check-card-gemini (ผู้ให้บริการ AI: Google Gemini 3.8 Flash)
+ * โมเดล "gemini-2.0-flash" ถูก Google ปิดใช้งานไปแล้ว (shut down 1 มิ.ย. 2026)
+ * จึงเปลี่ยนมาใช้ "gemini-3.8-flash" ซึ่งเป็นรุ่นปัจจุบัน
  *
  * เวอร์ชันเดียวกับ /app/api/check-card แต่เปลี่ยนไปเรียก Google
  * Generative Language API (Gemini) แทน Anthropic — ใช้ SYSTEM_PROMPT
@@ -25,7 +27,7 @@ type GeminiPart =
   | { text: string }
   | { inline_data: { mime_type: string; data: string } };
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-3.8-flash"; // "gemini-2.0-flash" ถูก Google ปิดใช้งานไปแล้ว (shut down 1 มิ.ย. 2026)
 
 export async function POST(req: Request) {
   try {

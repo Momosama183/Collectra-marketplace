@@ -18,7 +18,7 @@ const PROVIDER_ENDPOINT: Record<Provider, string> = {
 
 const PROVIDER_LABEL: Record<Provider, string> = {
   claude: "Claude (Anthropic)",
-  openai: "GPT-4o (OpenAI)",
+  openai: "GPT-5.6 Sol (OpenAI)",
   gemini: "Gemini (Google)",
 };
 
@@ -84,11 +84,11 @@ export default function VerifyPage() {
       });
 
       if (!response.ok) {
-        if (response.status === 502 || response.status === 500) {
-          throw new Error("ไม่สามารถเชื่อมต่อกับระบบตรวจสอบได้ ลองใหม่อีกครั้ง");
-        }
         const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+        if (data?.error) {
+          throw new Error(data.error);
+        }
+        throw new Error("ไม่สามารถเชื่อมต่อกับระบบตรวจสอบได้ ลองใหม่อีกครั้ง");
       }
 
       const data: VerifyResult = await response.json();
