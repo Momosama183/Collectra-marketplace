@@ -21,7 +21,16 @@ import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/che
  * สำหรับเวอร์ชันที่ใช้ AI เจ้าอื่น — ทั้งสามตัวใช้ SYSTEM_PROMPT
  * เดียวกันจาก lib/checkCardPrompt.ts เพื่อให้เทียบผลลัพธ์กันได้
  * อย่างยุติธรรม (apples-to-apples)
+ *
+ * เปิดใช้ web_search tool ของ Claude (server-side) ให้ AI ค้นเว็บ
+ * ประกอบการวิเคราะห์ได้เมื่อพอระบุได้ว่าเป็นการ์ดอัลบั้ม/เวอร์ชันใด
+ * (ดู lib/checkCardPrompt.ts) — เผื่อเวลาค้นเว็บ จึงตั้ง maxDuration
+ * ยาวขึ้น และอ่านเฉพาะ text block สุดท้ายเป็นคำตอบ เพราะเมื่อมีการ
+ * ค้นเว็บ content จะมี server_tool_use / web_search_tool_result
+ * ปนอยู่ด้วย ไม่ใช่แค่ text block เดียวเหมือนก่อน
  */
+
+export const maxDuration = 60;
 
 const SYSTEM_PROMPT = CHECK_CARD_SYSTEM_PROMPT;
 
@@ -83,9 +92,16 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 2000,
+        max_tokens: 4096,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
+        tools: [
+          {
+            type: "web_search_20250305",
+            name: "web_search",
+            max_uses: 3,
+          },
+        ],
       }),
     });
 
@@ -98,11 +114,13 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json();
-    const rawText = (data.content ?? [])
-      .filter((b: { type: string }) => b.type === "text")
-      .map((b: { text: string }) => b.text)
-      .join("")
-      .trim();
+    // เมื่อ Claude ใช้ web_search tool, content จะมี server_tool_use /
+    // web_search_tool_result ปนอยู่กับ text — เอาเฉพาะ text block
+    // "สุดท้าย" เป็นคำตอบจริง (ไม่รวมข้อความระหว่างขั้นตอนค้นเว็บ)
+    const textBlocks = (data.content ?? []).filter(
+      (b: { type: string }) => b.type === "text"
+    ) as { type: string; text: string }[];
+    const rawText = (textBlocks[textBlocks.length - 1]?.text ?? "").trim();
 
     const cleaned = cleanJsonText(rawText);
 
