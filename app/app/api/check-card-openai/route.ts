@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model: "gpt-5.6-sol",
-        max_tokens: 2000,
+        max_completion_tokens: 2000,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: CHECK_CARD_SYSTEM_PROMPT },
