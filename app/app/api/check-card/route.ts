@@ -6,7 +6,6 @@ import {
   buildMatchHintText,
   REFERENCE_INTRO_TEXT,
   REFERENCE_END_TEXT,
-  lastFetchErrors,
 } from "@/lib/referenceCards";
 
 /**
@@ -179,20 +178,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ชั่วคราว: debug info เพื่อตรวจสอบว่า image hashing ทำงานถูกต้องหรือไม่
-    // (ลบออกหลังจาก verify เสร็จ)
-    const debugInfo = {
-      _debug: {
-        referenceCardsLoaded: referenceCards.length,
-        imageMatchFound: !!imageMatch,
-        imageMatchLabel: imageMatch?.card.label ?? null,
-        imageMatchDistance: imageMatch?.distance ?? null,
-        imageMatchSide: imageMatch?.side ?? null,
-        fetchErrors: lastFetchErrors,
-      },
-    };
-
-    return NextResponse.json({ ...(result as object), ...debugInfo });
+    return NextResponse.json(result as object);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาดไม่ทราบสาเหตุ";
     return NextResponse.json({ error: message }, { status: 500 });
