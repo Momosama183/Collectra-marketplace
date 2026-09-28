@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/checkCardPrompt";
+import { fetchReferenceCards, REFERENCE_INTRO_TEXT, REFERENCE_END_TEXT } from "@/lib/referenceCards";
 
 /**
  * PC Check — /app/api/check-card-gemini (ผู้ให้บริการ AI: Google Gemini 3.8 Flash)
@@ -51,11 +52,25 @@ export async function POST(req: Request) {
     }
 
     const frontImg = await fileToBase64(front);
+    const referenceCards = await fetchReferenceCards();
 
-    const parts: GeminiPart[] = [
+    const parts: GeminiPart[] = [];
+
+    if (referenceCards.length > 0) {
+      parts.push({ text: REFERENCE_INTRO_TEXT });
+      for (const ref of referenceCards) {
+        parts.push({ text: `ตัวอย่างการ์ดแท้: ${ref.label} (ด้านหน้า)` });
+        parts.push({ inline_data: { mime_type: ref.front.mediaType, data: ref.front.data } });
+        parts.push({ text: `ตัวอย่างการ์ดแท้: ${ref.label} (ด้านหลัง)` });
+        parts.push({ inline_data: { mime_type: ref.back.mediaType, data: ref.back.data } });
+      }
+      parts.push({ text: REFERENCE_END_TEXT });
+    }
+
+    parts.push(
       { text: "นี่คือรูปด้านหน้าของการ์ดที่ต้องการตรวจสอบ:" },
       { inline_data: { mime_type: frontImg.mediaType, data: frontImg.data } },
-    ];
+    );
 
     if (back && back instanceof File && back.size > 0) {
       const backImg = await fileToBase64(back);
