@@ -90,7 +90,18 @@ export async function fetchReferenceCards(): Promise<ReferenceCard[]> {
       .eq("active", true);
 
     if (error) {
-      lastFetchErrors.push(`supabase query error: ${error.message}`);
+      // ชั่วคราว: serialize error object เต็มๆ (รวม cause ถ้ามี) เพื่อ debug
+      let fullDetail = "";
+      try {
+        fullDetail = JSON.stringify(error, Object.getOwnPropertyNames(error));
+      } catch {
+        fullDetail = String(error);
+      }
+      const causeInfo =
+        error && typeof error === "object" && "cause" in error
+          ? ` | cause: ${JSON.stringify((error as { cause?: unknown }).cause, Object.getOwnPropertyNames((error as { cause?: object }).cause ?? {}))}`
+          : "";
+      lastFetchErrors.push(`supabase query error: ${error.message} | full: ${fullDetail}${causeInfo}`);
       return [];
     }
     if (!rows || rows.length === 0) {
