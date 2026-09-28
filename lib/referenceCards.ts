@@ -61,16 +61,10 @@ async function urlToBase64Image(url: string): Promise<ReferenceImage | null> {
     const mediaType = res.headers.get("content-type") || "image/jpeg";
     const hash = await computeImageHash(buffer);
     return { mediaType, data: buffer.toString("base64"), hash };
-  } catch (err) {
-    // ชั่วคราว: เก็บ error message ไว้ debug (ดู lastFetchErrors ด้านล่าง)
-    lastFetchErrors.push(err instanceof Error ? err.message : String(err));
+  } catch {
     return null;
   }
 }
-
-/** ชั่วคราว: เก็บ error message ล่าสุดจากการโหลด/hash รูปอ้างอิง ไว้ debug
- * ปัญหา referenceCards ว่างเปล่าใน production (ลบออกหลัง verify เสร็จ) */
-export const lastFetchErrors: string[] = [];
 
 /**
  * ดึงชุดรูปการ์ดอ้างอิงที่ยืนยันแท้แล้วจาก Supabase (ตาราง reference_cards
@@ -82,30 +76,13 @@ export const lastFetchErrors: string[] = [];
  * เป็นส่วนเสริม ไม่ใช่ hard dependency ของการตรวจสอบการ์ด)
  */
 export async function fetchReferenceCards(): Promise<ReferenceCard[]> {
-  lastFetchErrors.length = 0; // เคลียร์ error จากรอบก่อนหน้า
   try {
     const { data: rows, error } = await supabase
       .from(REFERENCE_TABLE)
       .select("id, label, front_path, back_path")
       .eq("active", true);
 
-    if (error) {
-      // ชั่วคราว: serialize error object เต็มๆ (รวม cause ถ้ามี) เพื่อ debug
-      let fullDetail = "";
-      try {
-        fullDetail = JSON.stringify(error, Object.getOwnPropertyNames(error));
-      } catch {
-        fullDetail = String(error);
-      }
-      const causeInfo =
-        error && typeof error === "object" && "cause" in error
-          ? ` | cause: ${JSON.stringify((error as { cause?: unknown }).cause, Object.getOwnPropertyNames((error as { cause?: object }).cause ?? {}))}`
-          : "";
-      lastFetchErrors.push(`supabase query error: ${error.message} | full: ${fullDetail}${causeInfo}`);
-      return [];
-    }
-    if (!rows || rows.length === 0) {
-      lastFetchErrors.push("supabase query returned 0 rows");
+    if (error || !rows || rows.length === 0) {
       return [];
     }
 
@@ -125,8 +102,7 @@ export async function fetchReferenceCards(): Promise<ReferenceCard[]> {
       cards.push({ id: row.id, label: row.label, front, back });
     }
     return cards;
-  } catch (err) {
-    lastFetchErrors.push(`unexpected error: ${err instanceof Error ? err.message : String(err)}`);
+  } catch {
     return [];
   }
 }
