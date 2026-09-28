@@ -178,7 +178,19 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json(result);
+    // ชั่วคราว: debug info เพื่อตรวจสอบว่า image hashing ทำงานถูกต้องหรือไม่
+    // (ลบออกหลังจาก verify เสร็จ)
+    const debugInfo = {
+      _debug: {
+        referenceCardsLoaded: referenceCards.length,
+        imageMatchFound: !!imageMatch,
+        imageMatchLabel: imageMatch?.card.label ?? null,
+        imageMatchDistance: imageMatch?.distance ?? null,
+        imageMatchSide: imageMatch?.side ?? null,
+      },
+    };
+
+    return NextResponse.json({ ...(result as object), ...debugInfo });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาดไม่ทราบสาเหตุ";
     return NextResponse.json({ error: message }, { status: 500 });
