@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/checkCardPrompt";
+import { fetchReferenceCards, REFERENCE_INTRO_TEXT, REFERENCE_END_TEXT } from "@/lib/referenceCards";
 
 /**
  * PC Check — /app/api/check-card-openai (ผู้ให้บริการ AI: OpenAI GPT-5.6 Sol)
@@ -50,11 +51,31 @@ export async function POST(req: Request) {
     }
 
     const frontImg = await fileToBase64(front);
+    const referenceCards = await fetchReferenceCards();
 
-    const content: OpenAIContentBlock[] = [
+    const content: OpenAIContentBlock[] = [];
+
+    if (referenceCards.length > 0) {
+      content.push({ type: "text", text: REFERENCE_INTRO_TEXT });
+      for (const ref of referenceCards) {
+        content.push({ type: "text", text: `ตัวอย่างการ์ดแท้: ${ref.label} (ด้านหน้า)` });
+        content.push({
+          type: "image_url",
+          image_url: { url: `data:${ref.front.mediaType};base64,${ref.front.data}` },
+        });
+        content.push({ type: "text", text: `ตัวอย่างการ์ดแท้: ${ref.label} (ด้านหลัง)` });
+        content.push({
+          type: "image_url",
+          image_url: { url: `data:${ref.back.mediaType};base64,${ref.back.data}` },
+        });
+      }
+      content.push({ type: "text", text: REFERENCE_END_TEXT });
+    }
+
+    content.push(
       { type: "text", text: "นี่คือรูปด้านหน้าของการ์ดที่ต้องการตรวจสอบ:" },
       { type: "image_url", image_url: { url: `data:${frontImg.mediaType};base64,${frontImg.data}` } },
-    ];
+    );
 
     if (back && back instanceof File && back.size > 0) {
       const backImg = await fileToBase64(back);
