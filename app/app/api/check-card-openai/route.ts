@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { CHECK_CARD_SYSTEM_PROMPT, cleanJsonText, fileToBase64 } from "@/lib/checkCardPrompt";
-import { fetchReferenceCards, REFERENCE_INTRO_TEXT, REFERENCE_END_TEXT } from "@/lib/referenceCards";
+import {
+  fetchReferenceCards,
+  findImageMatch,
+  buildMatchHintText,
+  REFERENCE_INTRO_TEXT,
+  REFERENCE_END_TEXT,
+} from "@/lib/referenceCards";
 
 /**
  * PC Check — /app/api/check-card-openai (ผู้ให้บริการ AI: OpenAI GPT-5.6 Sol)
@@ -51,7 +57,21 @@ export async function POST(req: Request) {
     }
 
     const frontImg = await fileToBase64(front);
+    const backImg =
+      back && back instanceof File && back.size > 0 ? await fileToBase64(back) : null;
     const referenceCards = await fetchReferenceCards();
+
+    // เทียบรูปที่ส่งมากับรูปอ้างอิงทุกใบด้วยโค้ด (image hashing) ก่อนเสมอ
+    // — ไม่ให้ AI เป็นคนเดาเองว่า "ตรงกับ" รูปไหนหรือไม่ (ดูเหตุผลใน
+    // lib/referenceCards.ts)
+    const imageMatch =
+      referenceCards.length > 0
+        ? await findImageMatch(
+            Buffer.from(frontImg.data, "base64"),
+            backImg ? Buffer.from(backImg.data, "base64") : null,
+            referenceCards
+          )
+        : null;
 
     const content: OpenAIContentBlock[] = [];
 
@@ -72,13 +92,16 @@ export async function POST(req: Request) {
       content.push({ type: "text", text: REFERENCE_END_TEXT });
     }
 
+    if (imageMatch) {
+      content.push({ type: "text", text: buildMatchHintText(imageMatch) });
+    }
+
     content.push(
       { type: "text", text: "นี่คือรูปด้านหน้าของการ์ดที่ต้องการตรวจสอบ:" },
       { type: "image_url", image_url: { url: `data:${frontImg.mediaType};base64,${frontImg.data}` } },
     );
 
-    if (back && back instanceof File && back.size > 0) {
-      const backImg = await fileToBase64(back);
+    if (backImg) {
       content.push({ type: "text", text: "นี่คือรูปด้านหลังของการ์ดใบเดียวกัน:" });
       content.push({
         type: "image_url",
