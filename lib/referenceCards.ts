@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { computeImageHash, hammingDistance, MATCH_THRESHOLD } from "@/lib/imageHash";
 
 /**
  * ชุดรูปการ์ด TREASURE ที่ผู้ใช้ (เจ้าของร้าน) ยืนยันแล้วว่าเป็นของแท้ 100%
@@ -10,20 +11,30 @@ import { supabase } from "@/lib/supabase";
  * เพิ่ม/แก้ไข/ปิดใช้งานการ์ดอ้างอิงชุดนี้ได้ทุกเมื่อผ่าน Supabase dashboard
  * โดยไม่ต้องแก้โค้ดหรือ deploy ใหม่แต่อย่างใด
  *
- * หมายเหตุสำคัญ: โดยทั่วไปการ์ดอ้างอิงเหล่านี้มักเป็นคนละใบคนละอัลบั้ม/
- * สมาชิกกับการ์ดที่กำลังตรวจสอบ แต่ตอนนี้ AI จะตรวจสอบก่อนเสมอว่าการ์ด
- * ที่กำลังตรวจสอบตรงกับรูปอ้างอิงชุดใดชุดหนึ่งหรือไม่ (image matching) —
- * ถ้าตรงกันชัดเจน (ดีไซน์/ลวดลาย/องค์ประกอบตรงกันเป็นส่วนใหญ่ หรือเป็น
- * ภาพเดียวกันเป๊ะ) จะถือเป็นหลักฐานยืนยันความแท้ที่หนักแน่นเป็นพิเศษและ
- * ดันคะแนนเริ่มต้นขึ้นสูง ถ้าไม่ตรงกัน (กรณีปกติทั่วไป) จะใช้เปรียบเทียบ
- * เฉพาะ "ลักษณะการผลิตทั่วไป" เท่านั้น (คุณภาพงานพิมพ์ ความเรียบร้อยของ
- * ขอบ/มุมการ์ด พื้นผิวเคลือบ ฟอนต์/เลย์เอาต์มาตรฐานของค่าย YG) เหมือนเดิม
- * — ดูรายละเอียดขั้นตอนเต็มใน CHECK_CARD_SYSTEM_PROMPT (ขั้น 0)
+ * หมายเหตุสำคัญ (แก้ไขจากเวอร์ชันก่อนหน้า): เดิมให้ AI เป็นคนตรวจสอบเองว่า
+ * การ์ดที่กำลังตรวจสอบ "ตรงกับ" รูปอ้างอิงชุดใดชุดหนึ่งหรือไม่ (ให้ AI มอง
+ * แล้วเดา) แต่ทดสอบจริงพบว่าวิธีนี้ไม่แม่นยำเลย — แม้เป็นไฟล์รูปเดียวกัน
+ * เป๊ะ (byte-for-byte identical) AI ก็ยังจับคู่ไม่ได้ จึงเปลี่ยนมาให้โค้ด
+ * เป็นคนเทียบภาพแทนด้วย perceptual image hashing (ดู lib/imageHash.ts)
+ * ซึ่งแม่นยำกว่ามากสำหรับกรณี "รูปนี้เคยถูกอัปโหลดเป็นรูปอ้างอิงอยู่แล้ว"
+ * แล้วส่งผลลัพธ์เป็นข้อความ "SYSTEM_MATCH" แนบไปให้ AI ใช้ประกอบการให้
+ * คะแนนแทน (ดู buildMatchHintText ด้านล่าง และ CHECK_CARD_SYSTEM_PROMPT
+ * ขั้น 0) — AI จะไม่พยายามจับคู่ภาพเองด้วยสายตาอีกต่อไป
+ *
+ * ข้อจำกัดของการเทียบด้วย hashing: ทนทานต่อการบีบอัด/ย่อขนาด/ปรับแสง
+ * เล็กน้อย แต่ไม่ทนทานต่อการครอป/หมุนภาพต่างมุมมาก ดังนั้นจะจับคู่ได้ดี
+ * เฉพาะกรณี "รูปเดียวกันหรือใกล้เคียงกันมาก" เท่านั้น ไม่ใช่การจดจำว่า
+ * เป็นการ์ดใบเดียวกันที่ถ่ายคนละรูป/คนละมุม (ดูรายละเอียดใน imageHash.ts)
+ *
+ * ถ้าไม่ตรงกับรูปอ้างอิงใดเลย (กรณีปกติทั่วไป) AI จะใช้เปรียบเทียบเฉพาะ
+ * "ลักษณะการผลิตทั่วไป" เท่านั้น (คุณภาพงานพิมพ์ ความเรียบร้อยของขอบ/มุม
+ * การ์ด พื้นผิวเคลือบ ฟอนต์/เลย์เอาต์มาตรฐานของค่าย YG) เหมือนเดิม
  */
 
 export interface ReferenceImage {
   mediaType: string;
   data: string; // base64, ไม่มี data: URI prefix
+  hash: string; // perceptual hash (dHash, hex string) คำนวณจาก data ด้านบน
 }
 
 export interface ReferenceCard {
@@ -31,6 +42,12 @@ export interface ReferenceCard {
   label: string;
   front: ReferenceImage;
   back: ReferenceImage;
+}
+
+export interface ImageMatch {
+  card: ReferenceCard;
+  side: "front" | "back";
+  distance: number; // Hamming distance (0-256, ยิ่งน้อยยิ่งคล้ายกัน)
 }
 
 const REFERENCE_BUCKET = "reference-cards";
@@ -42,7 +59,8 @@ async function urlToBase64Image(url: string): Promise<ReferenceImage | null> {
     if (!res.ok) return null;
     const buffer = Buffer.from(await res.arrayBuffer());
     const mediaType = res.headers.get("content-type") || "image/jpeg";
-    return { mediaType, data: buffer.toString("base64") };
+    const hash = await computeImageHash(buffer);
+    return { mediaType, data: buffer.toString("base64"), hash };
   } catch {
     return null;
   }
@@ -89,14 +107,57 @@ export async function fetchReferenceCards(): Promise<ReferenceCard[]> {
 
 export const REFERENCE_INTRO_TEXT =
   "ต่อไปนี้คือรูปตัวอย่างการ์ด TREASURE ที่ผู้ใช้ (เจ้าของร้าน) ยืนยันแล้วว่าเป็น" +
-  "ของแท้ 100% จากคอลเลกชันของตัวเอง/เพื่อน ให้ตรวจสอบก่อนเสมอว่าการ์ดที่กำลัง" +
-  "จะตรวจสอบต่อจากนี้ มีดีไซน์ตรงกันหรือใกล้เคียงกันมากกับรูปตัวอย่างอ้างอิงชุด" +
-  "ใดชุดหนึ่งหรือไม่ (ดูวิธีคำนวณคะแนนที่ \"ขั้น 0\" ในคำแนะนำ) ถ้าพบว่าตรงกัน" +
-  "ชัดเจน ให้ถือเป็นหลักฐานยืนยันความแท้ที่หนักแน่นเป็นพิเศษ แต่ถ้าไม่ตรงกับรูป" +
-  "ใดเลย (ซึ่งเป็นกรณีปกติทั่วไป เพราะมักเป็นคนละใบคนละอัลบั้ม/สมาชิก) ให้ใช้" +
-  "เปรียบเทียบเฉพาะ \"ลักษณะการผลิตทั่วไป\" เท่านั้น เช่น คุณภาพงานพิมพ์ ความ" +
-  "คมชัด ความเรียบร้อยของขอบ/มุมการ์ด พื้นผิวเคลือบ และรูปแบบฟอนต์/เลย์เอาต์" +
-  "มาตรฐานของค่าย YG";
+  "ของแท้ 100% จากคอลเลกชันของตัวเอง/เพื่อน ใช้เปรียบเทียบ \"ลักษณะการผลิต" +
+  "ทั่วไป\" เท่านั้น เช่น คุณภาพงานพิมพ์ ความคมชัด ความเรียบร้อยของขอบ/มุม" +
+  "การ์ด พื้นผิวเคลือบ และรูปแบบฟอนต์/เลย์เอาต์มาตรฐานของค่าย YG — ห้าม" +
+  "พยายามเดาเองด้วยสายตาว่าการ์ดที่กำลังตรวจสอบ \"ตรงกับ\" รูปตัวอย่างชุดใด" +
+  "ชุดหนึ่งหรือไม่ (การประเมินแบบ eyeball ของ AI ไม่แม่นยำพอสำหรับงานเทียบ" +
+  "ภาพระดับพิกเซล) เรื่องนี้ระบบจะคำนวณด้วยโค้ดแยกต่างหากด้วย image hashing" +
+  " แล้วแจ้งผลเป็นข้อความขึ้นต้นด้วย \"🔍 SYSTEM_MATCH:\" ให้ก่อนรูปการ์ดจริง" +
+  " (ถ้าพบว่าตรงกัน) ดูวิธีใช้ผลลัพธ์นี้ที่ \"ขั้น 0\" ในคำแนะนำ";
 
 export const REFERENCE_END_TEXT =
   "จบตัวอย่างการ์ดอ้างอิงที่ยืนยันแท้แล้ว ต่อไปนี้คือการ์ดจริงที่ต้องการให้ตรวจสอบ:";
+
+/**
+ * เทียบรูปการ์ดที่กำลังตรวจสอบ (front/back) กับรูปอ้างอิงทุกใบในฐานข้อมูล
+ * ด้วย perceptual image hash คืนค่าคู่ที่คล้ายกันที่สุดถ้าต่ำกว่าเกณฑ์
+ * MATCH_THRESHOLD มิเช่นนั้นคืนค่า null (ถือว่าไม่ตรงกับใบไหนเลย)
+ */
+export async function findImageMatch(
+  frontBuffer: Buffer,
+  backBuffer: Buffer | null,
+  referenceCards: ReferenceCard[]
+): Promise<ImageMatch | null> {
+  const frontHash = await computeImageHash(frontBuffer);
+  const backHash = backBuffer ? await computeImageHash(backBuffer) : null;
+
+  let best: ImageMatch | null = null;
+  for (const card of referenceCards) {
+    const frontDistance = hammingDistance(frontHash, card.front.hash);
+    if (frontDistance <= MATCH_THRESHOLD && (!best || frontDistance < best.distance)) {
+      best = { card, side: "front", distance: frontDistance };
+    }
+    if (backHash) {
+      const backDistance = hammingDistance(backHash, card.back.hash);
+      if (backDistance <= MATCH_THRESHOLD && (!best || backDistance < best.distance)) {
+        best = { card, side: "back", distance: backDistance };
+      }
+    }
+  }
+  return best;
+}
+
+/** สร้างข้อความ "SYSTEM_MATCH" จากผลจับคู่ภาพ เพื่อแนบเข้าไปในพร้อมพ์ให้ AI ใช้ */
+export function buildMatchHintText(match: ImageMatch): string {
+  const similarityPct = Math.round(((256 - match.distance) / 256) * 100);
+  const sideText = match.side === "front" ? "ด้านหน้า" : "ด้านหลัง";
+  return (
+    `🔍 SYSTEM_MATCH: ระบบตรวจพบด้วยอัลกอริทึม image hashing (คำนวณจากโค้ด` +
+    `โดยตรง ไม่ใช่การประเมินของ AI) ว่ารูป${sideText}ของการ์ดที่กำลังตรวจสอบ` +
+    ` ตรงกับรูปอ้างอิง "${match.card.label}" (${sideText}) อย่างมีนัยสำคัญ ` +
+    `— ความคล้ายกันของพิกเซลหลัง resize ${similarityPct}% (Hamming distance` +
+    ` = ${match.distance}/256) ให้ถือเป็นหลักฐานยืนยันความแท้ที่หนักแน่น` +
+    `ที่สุดตาม "ขั้น 0" ในคำแนะนำ`
+  );
+}
