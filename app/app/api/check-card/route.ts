@@ -6,6 +6,7 @@ import {
   buildMatchHintText,
   REFERENCE_INTRO_TEXT,
   REFERENCE_END_TEXT,
+  lastFetchErrors,
 } from "@/lib/referenceCards";
 
 /**
@@ -187,6 +188,7 @@ export async function POST(req: Request) {
         imageMatchLabel: imageMatch?.card.label ?? null,
         imageMatchDistance: imageMatch?.distance ?? null,
         imageMatchSide: imageMatch?.side ?? null,
+        fetchErrors: lastFetchErrors,
       },
     };
 
