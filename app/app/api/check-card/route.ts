@@ -29,12 +29,7 @@ import {
  * เดียวกันจาก lib/checkCardPrompt.ts เพื่อให้เทียบผลลัพธ์กันได้
  * อย่างยุติธรรม (apples-to-apples)
  *
- * เปิดใช้ web_search tool ของ Claude (server-side) ให้ AI ค้นเว็บ
- * ประกอบการวิเคราะห์ได้เมื่อพอระบุได้ว่าเป็นการ์ดอัลบั้ม/เวอร์ชันใด
- * (ดู lib/checkCardPrompt.ts) — เผื่อเวลาค้นเว็บ จึงตั้ง maxDuration
- * ยาวขึ้น และอ่านเฉพาะ text block สุดท้ายเป็นคำตอบ เพราะเมื่อมีการ
- * ค้นเว็บ content จะมี server_tool_use / web_search_tool_result
- * ปนอยู่ด้วย ไม่ใช่แค่ text block เดียวเหมือนก่อน
+ * แก้ไข 1/10/2569: ปิด web_search tool ของ Claude เพราะทำให้ Vercel function timeout (>60s) บ่อยมาก — ดูรายละเอียดใน commit message
  */
 
 export const maxDuration = 60;
@@ -139,13 +134,6 @@ export async function POST(req: Request) {
         max_tokens: 4096,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
-        tools: [
-          {
-            type: "web_search_20250305",
-            name: "web_search",
-            max_uses: 3,
-          },
-        ],
       }),
     });
 
