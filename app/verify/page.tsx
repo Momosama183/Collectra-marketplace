@@ -24,7 +24,7 @@ const PROVIDER_LABEL: Record<Provider, string> = {
 
 type VerifyResult = {
   confidence_score: number;
-  verdict: "Likely Authentic" | "Suspicious" | "Needs Manual Review";
+  verdict: "Likely Authentic" | "Needs Manual Review" | "Suspicious" | "Likely Counterfeit";
   verdict_th: string;
   summary: string;
   observations: Observation[];
@@ -34,7 +34,8 @@ type VerifyResult = {
 const VERDICT_STYLE: Record<string, { label: string; color: string; bg: string }> = {
   "Likely Authentic": { label: "Likely Authentic", color: "#166534", bg: "#dcfce7" },
   "Needs Manual Review": { label: "Needs Manual Review", color: "#92400e", bg: "#fef3c7" },
-  Suspicious: { label: "Suspicious", color: "#991b1b", bg: "#fee2e2" },
+  Suspicious: { label: "Suspicious", color: "#9a3412", bg: "#ffedd5" },
+  "Likely Counterfeit": { label: "Likely Counterfeit", color: "#991b1b", bg: "#fee2e2" },
 };
 
 export default function VerifyPage() {
