@@ -3,7 +3,18 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Collectra Stats", robots: { index: false, follow: false } };
 
+type Part = {
+  visits_total: number;
+  visitors_unique: number;
+  visits_qr: number;
+  checks_total: number;
+  visits_today: number;
+  checks_today: number;
+  by_day: { day: string; visits: number; checks: number }[];
+};
+
 type Summary = {
+  app?: Part;
   visits_total: number;
   visitors_unique: number;
   visits_qr: number;
@@ -72,7 +83,7 @@ export default async function StatsPage({
   return (
     <main style={wrap}>
       <h1 style={h1}>Collectra Stats</h1>
-      <p style={{ color: "#555", marginTop: 0 }}>ตัวเลขรวมตั้งแต่เริ่มนับ (วันนี้ = ตามเวลาไทย)</p>
+      <p style={{ color: "#555", marginTop: 0 }}>ตัวเลขรวมตั้งแต่เริ่มนับ (วันนี้ = ตามเวลาไทย) ส่วนบนคือหน้าเว็บตรวจการ์ด ส่วนล่างคือแอปมือถือ</p>
       <div style={grid}>
         {cards.map(([label, value, note]) => (
           <div key={label} style={card}>
@@ -82,6 +93,26 @@ export default async function StatsPage({
           </div>
         ))}
       </div>
+
+      {s.app && (
+        <>
+          <h2 style={h2}>แอปมือถือ (Render)</h2>
+          <div style={grid}>
+            {([
+              ["เปิดแอป (ครั้ง)", s.app.visits_total, `วันนี้ ${nf(s.app.visits_today)}`],
+              ["ผู้ใช้ไม่ซ้ำ (คน)", s.app.visitors_unique, "นับจากคุกกี้ของเบราว์เซอร์"],
+              ["เข้าผ่าน QR (ครั้ง)", s.app.visits_qr, "ลิงก์ที่มี ?src=qr"],
+              ["กดตรวจการ์ดในแอป (ครั้ง)", s.app.checks_total, `วันนี้ ${nf(s.app.checks_today)}`],
+            ] as [string, number, string][]).map(([label, value, note]) => (
+              <div key={label} style={card}>
+                <div style={{ fontSize: 14, color: "#555" }}>{label}</div>
+                <div style={{ fontSize: 40, fontWeight: 800, lineHeight: 1.2 }}>{nf(value)}</div>
+                <div style={{ fontSize: 13, color: "#777" }}>{note}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <h2 style={h2}>แยกตาม AI ที่ใช้ตรวจ</h2>
       <p style={{ margin: 0 }}>
