@@ -73,7 +73,7 @@ export function middleware(req: NextRequest, event: NextFetchEvent) {
       }
     } else if (req.method === "POST" && path.startsWith("/app/api/check-card")) {
       const provider = path.endsWith("-openai") ? "openai" : path.endsWith("-gemini") ? "gemini" : "claude";
-      send(event, { p_kind: "check", p_visitor: vid, p_src: null, p_provider: provider });
+      send(event, { p_kind: "check", p_visitor: vid, p_src: ua.startsWith("collectra-mobile") ? "app" : null, p_provider: provider });
     }
 
     if (isNew) {
