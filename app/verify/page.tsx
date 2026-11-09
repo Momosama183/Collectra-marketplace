@@ -217,6 +217,7 @@ export default function VerifyPage() {
           <div className="verifyLoading">
             <div className="verifySpinner" />
             <p>AI is analyzing your photocard…</p>
+            <p>การตรวจอาจใช้เวลา 30–60 วินาที โปรดอย่าปิดหน้านี้</p>
             <ul>
               <li>Print quality</li>
               <li>Color consistency</li>
